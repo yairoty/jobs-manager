@@ -1,11 +1,3 @@
-// app db:
-// updateMaxJobsRun
-
-// createJob
-// readJob(null/uid)
-// updateJob(uid, Job)
-// deleteJob 
-
 const { v4: uuidv4 } = require('uuid');
 
 const testJobs = [{
@@ -48,7 +40,7 @@ const testJobs = [{
 
 // db instance in memory
 const dbInstance = {
-    jobs: [].concat(testJobs),
+    jobs: [],
     meta: [{
         maxJobRun: 5 // default 5
     }]
@@ -56,7 +48,7 @@ const dbInstance = {
 
 function printDbState(showFull) {
     return;
-    // display the in memory db
+    // display the in-memory db
     if (showFull) {
         console.log('\nDB STATUS:', dbInstance.jobs);
         return;

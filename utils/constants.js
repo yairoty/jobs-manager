@@ -1,6 +1,4 @@
 
-// (paused, pending, running, finidshed/failed => date ?)
-
 const JOB_STATUS = {
     PENDING: 'pending',
     RUNNING: 'running',

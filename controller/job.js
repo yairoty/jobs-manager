@@ -3,15 +3,6 @@ const cronParser = require('cron-parser');
 const db = require('../db/db');
 const { JOB_STATUS } = require('../utils/constants');
 
-// Job entity: 
-// CRON time OR singleTIme run 
-// onRun function callback
-// onCancel function callback
-// creation date
-// last run date
-// status PENDING RUNNING FAILED + FINISHED (single run)
-// uid
-// logicalId = onRun function ?
 class Job {
     constructor(moduleName, commandName, cronTime, onCancel) {
         this.commandName = commandName; // mandatory
@@ -23,17 +14,10 @@ class Job {
         this.lastRunDate = null;
         this.nextRunDate = null;
         this.status = JOB_STATUS.PENDING;
-        this.uid = '' // TOOD add uid lib
-        this.logicalId = commandName.toString() + '.' + moduleName.toString();
+        this.uid = null;
+        this.logicalId = commandName.toString() + '_' + moduleName.toString();
     }
 }
-
-// cron process (cron middleware ?):
-// wakeup every sec
-// get filtered tasks for running (nextRunningTs + status + MAX_RUNNING_JOBS)
-// run the jobs
-// update nextRunningTs
-// on error -> update error + cleanupFn
 
 let MAX_JOB_RUN = null;
 
@@ -65,7 +49,7 @@ function isValidStatus(status) {
 }
 
 async function updateMeta(newMeta) {
-    await validateMetadata(newMeta); // TODO add validation
+    await validateMetadata(newMeta);
 
     await db.updateMeta(newMeta);
 
@@ -92,7 +76,7 @@ async function ticker() {
     const pendingJobsSorted = jobsList.filter(job => job.status === JOB_STATUS.PENDING)
         .sort(sortByNextRunDate);
 
-    console.log(`[ticker] found ${pendingJobsSorted.length} pending jobs. [${pendingJobsSorted.map(i => i.commandName)}]`);
+    console.log(`[ticker] found ${pendingJobsSorted.length} pending jobs.`);
 
     if (pendingJobsSorted.length === 0) {
         return;
@@ -103,7 +87,7 @@ async function ticker() {
     }
 
     const nextJobs = pendingJobsSorted.splice(0, runningSlots);
-    console.log(`[ticker] start running ${nextJobs.length} jobs. [${nextJobs.map(i => i.commandName)}]`);
+    console.log(`[ticker] start running ${nextJobs.length} jobs.`);
     for (let job of nextJobs) {
 
         // update job
@@ -175,7 +159,7 @@ async function getJobStatus(uid) {
     return jobList.map(getStatusData);
 }
 
-// async function cancelJob() { // same as updateJobStatus ?
+// async function cancelJob() { // TODO add cancel
 //     
 // }
 
