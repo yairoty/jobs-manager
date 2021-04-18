@@ -135,12 +135,8 @@ async function ticker() {
                     });
 
                 // add to cancel list
-                cancelRunningJobManger.add(job.uid, onCancel);
-
-                setTimeout(() => {
-                    cancelJob(job.uid);
-                }, 3000)
-            })
+                cancelRunningJobManger.add(job.uid, onCancel);                
+            });
         } catch (err) {
             console.error(`[ticker] ${job.uid}`, chalk.red(`Error`), err);
             onJobError(job.uid);
