@@ -4,21 +4,21 @@ const { JOB_STATUS } = require('../utils/constants');
 const router = express.Router();
 
 
-router.route('/')
-    .get(async (req, res) => {
-        const jobs = await jobCtrl.getAllJobs();
+// router.route('/')
+//     .get(async (req, res) => {
+//         const jobs = await jobCtrl.getAllJobs();
 
-        return res.json(jobs);
-    })
-    .post(async (req, res) => {
-        const newJob = await jobCtrl.createJob(req.body);
+//         return res.json(jobs);
+//     })
+//     .post(async (req, res) => {
+//         const newJob = await jobCtrl.createJob(req.body);
 
-        return res.json(newJob);
-    })
-    .delete(async (req, res) => {
-        await jobCtrl.deleteJob(req.params.id);
-        res.send('deleted successfully');
-    });
+//         return res.json(newJob);
+//     })
+//     .delete(async (req, res) => {
+//         await jobCtrl.deleteJob(req.params.id);
+//         res.send('deleted successfully');
+//     });
 
 router.route('/status')
     .get(async (req, res) => {

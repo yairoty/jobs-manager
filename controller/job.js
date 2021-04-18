@@ -41,7 +41,7 @@ function validateJob(schema) {
 function validateMetadata(schema) {
     // TODO add schema validation middleware    
     if (!schema.maxJobRun)
-        throw Error('missing meta args');
+        throw 'missing meta args';
 }
 
 function isValidStatus(status) {
@@ -55,6 +55,8 @@ async function updateMeta(newMeta) {
 
     if (newMeta.maxJobRun && Number.isInteger(newMeta.maxJobRun))
         MAX_JOB_RUN = newMeta.maxJobRun;
+
+    return {maxJobRun: newMeta.maxJobRun}
 }
 
 async function ticker() {
