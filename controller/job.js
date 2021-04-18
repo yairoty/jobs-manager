@@ -159,7 +159,7 @@ async function deleteJob(uid) {
 
 async function updateJobStatus(uid, status) {
     if (!uid || !status || !isValidStatus(status))
-        throw Error('invalid args');
+        throw 'invalid args';
 
     return db.updateJob(uid, status);
 }
