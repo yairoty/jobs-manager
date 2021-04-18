@@ -22,7 +22,7 @@ const router = express.Router();
 
 router.route('/status')
     .get(async (req, res) => {
-        const jobStatus = await jobCtrl.getJobStatus(req.params.id)
+        const jobStatus = await jobCtrl.getJobStatus(req.params.id);
 
         return res.json(jobStatus);
     })

@@ -4,7 +4,8 @@ const JOB_STATUS = {
     RUNNING: 'running',
     FAILED: 'failed',    
     PAUSED: 'paused',
-    FINISHED: 'finidshed'
+    FINISHED: 'finidshed',
+    CANCEL: 'canceled'
 }
 
 module.exports = {

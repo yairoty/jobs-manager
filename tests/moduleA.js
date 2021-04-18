@@ -16,7 +16,7 @@ async function test2_timeoutJob() {
 
 async function test3_errorJob() {
     console.log('moduleA:test3_errorJob fires');    
-    throw Error('moduleA:test3_errorJob setTimeout error')
+    throw Error('moduleA:test3_errorJob setTimeout error');
 }
 
 module.exports = {

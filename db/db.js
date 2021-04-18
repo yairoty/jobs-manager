@@ -4,7 +4,7 @@ const testJobs = [{
     commandName: 'test1',
     moduleName: 'tests/moduleA',
     cronTime: '*/10 * * * * *',
-    onCancel: undefined,
+    onCancel: null,
     singleRun: false,
     creationDate: 1,
     lastRunDate: null,
@@ -16,7 +16,7 @@ const testJobs = [{
     commandName: 'test2_timeoutJob',
     moduleName: 'tests/moduleA',
     cronTime: '*/10 * * * * *',
-    onCancel: undefined,
+    onCancel: null,
     singleRun: false,
     creationDate: 2,
     lastRunDate: null,
@@ -28,7 +28,7 @@ const testJobs = [{
     commandName: 'test3_errorJob',
     moduleName: 'tests/moduleA',
     cronTime: '*/10 * * * * *',
-    onCancel: undefined,
+    onCancel: null,
     singleRun: false,
     creationDate: 3,
     lastRunDate: null,
@@ -67,8 +67,7 @@ function printDbState(showFull) {
 
 async function createJob(job) {
     const newJob = Object.assign({}, job, { uid: uuidv4() });
-    dbInstance.jobs.push(newJob);
-    printDbState(true)
+    dbInstance.jobs.push(newJob);    
 }
 
 async function readJob(uid) {
@@ -84,14 +83,12 @@ async function updateJob(uid, newJob) {
             Object.assign(job, newJob);
             break;
         }
-    }
-    printDbState();
+    }    
 }
 
 async function deleteJob(uid) {
     const data = dbInstance.jobs.filter(job => job.uid !== uid);
-    dbInstance.jobs = data;
-    printDbState();
+    dbInstance.jobs = data;    
 }
 
 async function readNextRunDateJobs() {

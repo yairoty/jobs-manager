@@ -1,5 +1,6 @@
 const chalk = require("chalk");
 const cronParser = require('cron-parser');
+const PCancelable = require('p-cancelable');
 const db = require('../db/db');
 const { JOB_STATUS } = require('../utils/constants');
 
@@ -20,6 +21,25 @@ class Job {
 }
 
 let MAX_JOB_RUN = null;
+const cancelRunningJobManger = {
+    list: [],
+    add: function (id, onCancel) {
+        this.list.push({
+            id,
+            onCancel
+        });
+    },
+    remove: function (id) {
+        this.list = this.list.filter(i => i.id !== id);
+    },
+    cancel: async function (id) {
+        const target = this.list.find(i => i.id === id);
+        if (target)
+            await target.onCancel();
+
+        this.remove(id);
+    }
+};
 
 async function init() {
     await syncMaxJobRun();
@@ -35,7 +55,7 @@ async function syncMaxJobRun() {
 function validateJob(schema) {
     // TODO add schema validation middleware    
     if (!schema.commandName || !schema.moduleName)
-        throw Error('missing job args');
+        throw 'missing job args';
 }
 
 function validateMetadata(schema) {
@@ -56,7 +76,7 @@ async function updateMeta(newMeta) {
     if (newMeta.maxJobRun && Number.isInteger(newMeta.maxJobRun))
         MAX_JOB_RUN = newMeta.maxJobRun;
 
-    return {maxJobRun: newMeta.maxJobRun}
+    return { maxJobRun: newMeta.maxJobRun }
 }
 
 async function ticker() {
@@ -104,12 +124,23 @@ async function ticker() {
             let modulePath = require.resolve(`../${job.moduleName}.js`);
             let targetModule = require(modulePath);
             let targetFn = targetModule[job.commandName];
-            targetFn()
-                .then(async () => {
-                    await onJobFinish(job.uid)
-                }).catch(async (err) => {
-                    await onJobError(job.uid);
-                })
+
+            new PCancelable((resolve, reject, onCancel) => {
+                targetFn()
+                    .then(async () => {
+                        await onJobFinish(job.uid);
+                    }).catch(async (err) => {
+                        console.error(`[ticker] ${job.uid}`, chalk.red(`Error`), err);
+                        await onJobError(job.uid);
+                    });
+
+                // add to cancel list
+                cancelRunningJobManger.add(job.uid, onCancel);
+
+                setTimeout(() => {
+                    cancelJob(job.uid);
+                }, 3000)
+            })
         } catch (err) {
             console.error(`[ticker] ${job.uid}`, chalk.red(`Error`), err);
             onJobError(job.uid);
@@ -161,9 +192,32 @@ async function getJobStatus(uid) {
     return jobList.map(getStatusData);
 }
 
-// async function cancelJob() { // TODO add cancel
-//     
-// }
+async function cancelJob(uid) {
+    try {
+        const jobUpdate = {
+            status: JOB_STATUS.CANCEL
+        }
+
+        // update record as canceled
+        await db.updateJob(uid, jobUpdate);
+
+        //cancel inprogress process
+        await cancelRunningJobManger.cancel(uid);
+
+        // fire rollback function
+        const job = await db.readJob(uid);
+        if (job.onCancel) {
+            const modulePath = require.resolve(`../${job.moduleName}.js`);
+            const targetModule = require(modulePath);
+            const rollbackFn = targetModule[job.onCancel];
+            await rollbackFn();
+        }
+    } catch (err) {
+        console.error('[cancelJob]', chalk.red('failed'), err);
+        throw err;
+    }
+
+}
 
 async function updateJobsMax(newMaxValue) {
     await db.updateMeta(newMaxValue)
@@ -182,6 +236,7 @@ async function onJobFinish(uid) {
         data.status = JOB_STATUS.FINISHED;
 
     await db.updateJob(uid, Object.assign({}, job, data));
+    cancelRunningJobManger.remove(uid);
 }
 
 async function onJobError(uid) {
@@ -193,6 +248,7 @@ async function onJobError(uid) {
     }
 
     await db.updateJob(uid, jobUpdate);
+    await cancelRunningJobManger.cancel(uid);
 }
 
 function calcNextRunDate(cronTime) {
@@ -214,5 +270,6 @@ module.exports = {
     getJobStatus,
     updateJobStatus,
     updateJobsMax,
-    getAllJobs
+    getAllJobs,
+    cancelJob
 };
