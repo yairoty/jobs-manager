@@ -1,4 +1,5 @@
 const jobCtrl = require('../controller/job');
+const db = require('../db/db');
 
 const initDb = () => console.log('db init');
 const cleanupDb = () => console.log('db cleanupDb');
@@ -19,13 +20,13 @@ describe('update metadata', () => {
 })
 
 describe('job CRUD', () => {
+    jest.mock('../db/db');
 
     test('should failed create job with missing params moduleName', async () => {
         const missingParamsJob = {
             commandName: 'testCommandName'
         };
         await expect(jobCtrl.createJob(missingParamsJob)).rejects.toMatch('missing job args');
-
     });
 
     test('should failed create job with missing params commandName', async () => {
@@ -35,7 +36,45 @@ describe('job CRUD', () => {
         await expect(jobCtrl.createJob(missingParamsJob)).rejects.toMatch('missing job args');
     });
 
-    test('should create job', () => {
+    test('should create single run job', async () => {
+        jest.spyOn(db, 'createJob').mockResolvedValueOnce({
+            commandName: 'testCommandName',
+            moduleName: 'testModuleName',            
+            uid: 'mockUid'
+        });
+
+        const jobBody = {
+            commandName: 'testCommandName',
+            moduleName: 'testModuleName'
+        };
+        const mockResp = {
+            commandName: 'testCommandName',
+            moduleName: 'testModuleName',
+            singleRun: true,
+            status: 'pending',            
+        }
+        await expect(jobCtrl.createJob(jobBody)).resolves.toMatchObject(mockResp);
+    });
+
+    test('should create a cron job', async () => {
+        jest.spyOn(db, 'createJob').mockResolvedValueOnce({
+            commandName: 'testCommandName',
+            moduleName: 'testModuleName',            
+            uid: 'mockUid'
+        });
+
+        const jobBody = {
+            commandName: 'testCommandName',
+            moduleName: 'testModuleName',
+            cronTime: '*/10 * * * * *'
+        };
+        const mockResp = {
+            commandName: 'testCommandName',
+            moduleName: 'testModuleName',
+            singleRun: false,
+            status: 'pending',            
+        }
+        await expect(jobCtrl.createJob(jobBody)).resolves.toMatchObject(mockResp);
     });
 
     test('should delete job', () => {
@@ -44,7 +83,7 @@ describe('job CRUD', () => {
 
     test('should fail update Job with wrong Status', async () => {
         const testId = 'testId';
-        const invalidStatus = 'invalidStatus'
+        const invalidStatus = 'invalidStatus';
         await expect(jobCtrl.updateJobStatus(testId, invalidStatus)).rejects.toMatch('invalid args');
     });
 
