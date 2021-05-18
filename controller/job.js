@@ -1,24 +1,17 @@
 const chalk = require("chalk");
-const cronParser = require('cron-parser');
+// const cronParser = require('cron-parser');
 const PCancelable = require('p-cancelable');
 const db = require('../db/db');
+const { Job,
+    validateJob,
+    isValidStatus,
+    validateMetadata,
+    sortByNextRunDate,
+    calcNextRunDate,
+    isRunningJob,
+    isPendingJob,
+    getStatusData } = require('../model/job');
 const { JOB_STATUS } = require('../utils/constants');
-
-class Job {
-    constructor(moduleName, commandName, cronTime, onCancel) {
-        this.commandName = commandName; // mandatory
-        this.moduleName = moduleName; // mandatory
-        this.cronTime = cronTime; // optional        
-        this.onCancel = onCancel; // optional
-        this.singleRun = !Boolean(cronTime);
-        this.creationDate = Date.now();
-        this.lastRunDate = null;
-        this.nextRunDate = null;
-        this.status = JOB_STATUS.PENDING;
-        this.uid = null;
-        this.logicalId = commandName.toString() + '_' + moduleName.toString();
-    }
-};
 
 let MAX_JOB_RUN = null;
 const cancelRunningJobManger = {
@@ -53,27 +46,8 @@ async function syncMaxJobRun() {
     }
 }
 
-function validateJob(schema) {
-    // TODO add schema validation middleware    
-    if (!schema.commandName || !schema.moduleName) {
-        throw 'missing job args';
-    }
-}
-
-function validateMetadata(schema) {
-    // TODO add schema validation middleware    
-    if (!schema.maxJobRun) {
-        throw 'missing meta args';
-    }
-}
-
-function isValidStatus(status) {
-    return Object.values(JOB_STATUS).includes(status);
-}
-
 async function updateMeta(newMeta) {
     await validateMetadata(newMeta);
-
     await db.updateMeta(newMeta);
 
     if (newMeta.maxJobRun && Number.isInteger(newMeta.maxJobRun)) {
@@ -86,25 +60,10 @@ async function updateMeta(newMeta) {
 }
 
 async function ticker() {
-    const sortByNextRunDate = (a, b) => {
-        if (a.nextRunDate === null && b.nextRunDate === null) {
-            return a.creationDate < b.creationDate ? -1 : 1;
-        }
-
-        if (a.nextRunDate === null) {
-            return -1;
-        }
-
-        if (a.nextRunDate === b.nextRunDate) {
-            return 0;
-        }
-
-        return a.nextRunDate < b.nextRunDate ? 1 : -1;
-    }
     const jobsList = await db.readNextRunDateJobs();
-    const runningJobs = jobsList.filter(job => job.status === JOB_STATUS.RUNNING);
+    const runningJobs = jobsList.filter(isRunningJob);
     const runningSlots = MAX_JOB_RUN - runningJobs.length;
-    const pendingJobsSorted = jobsList.filter(job => job.status === JOB_STATUS.PENDING)
+    const pendingJobsSorted = jobsList.filter(isPendingJob)
         .sort(sortByNextRunDate);
 
     console.log(`[ticker] found ${pendingJobsSorted.length} pending jobs.`);
@@ -171,7 +130,6 @@ async function updateJobStatus(uid, status) {
     if (!uid || !status || !isValidStatus(status)) {
         throw 'invalid args';
     }
-
     return db.updateJob(uid, status);
 }
 
@@ -180,16 +138,6 @@ async function getAllJobs() {
 }
 
 async function getJobStatus(uid) {
-    const getStatusData = (job) => {
-        return {
-            commandName: job.commandName,
-            moduleName: job.moduleName,
-            status: job.status,
-            nextRunDate: job.nextRunDate,
-            id: job.uid
-        }
-    };
-
     if (uid) {
         const job = await db.readJob(uid);
         return getStatusData(job);
@@ -203,7 +151,7 @@ async function cancelJob(uid) {
     try {
         const jobUpdate = {
             status: JOB_STATUS.CANCEL
-        }
+        };
 
         // update record as canceled
         await db.updateJob(uid, jobUpdate);
@@ -257,16 +205,6 @@ async function onJobError(uid) {
 
     await db.updateJob(uid, jobUpdate);
     await cancelRunningJobManger.cancel(uid);
-}
-
-function calcNextRunDate(cronTime) {
-    try {
-        const interval = cronParser.parseExpression(cronTime);
-        return interval.next().getTime();
-    } catch (err) {
-        console.error('[calcNextRunDate] failed', err);
-        throw err;
-    }
 }
 
 module.exports = {
