@@ -4,4 +4,4 @@ async function test1() {
 
 module.exports = {
     test1
-}
+};

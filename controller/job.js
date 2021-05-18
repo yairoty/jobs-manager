@@ -18,7 +18,7 @@ class Job {
         this.uid = null;
         this.logicalId = commandName.toString() + '_' + moduleName.toString();
     }
-}
+};
 
 let MAX_JOB_RUN = null;
 const cancelRunningJobManger = {
@@ -34,8 +34,9 @@ const cancelRunningJobManger = {
     },
     cancel: async function (id) {
         const target = this.list.find(i => i.id === id);
-        if (target)
+        if (target) {
             await target.onCancel();
+        }
 
         this.remove(id);
     }
@@ -54,14 +55,16 @@ async function syncMaxJobRun() {
 
 function validateJob(schema) {
     // TODO add schema validation middleware    
-    if (!schema.commandName || !schema.moduleName)
+    if (!schema.commandName || !schema.moduleName) {
         throw 'missing job args';
+    }
 }
 
 function validateMetadata(schema) {
     // TODO add schema validation middleware    
-    if (!schema.maxJobRun)
+    if (!schema.maxJobRun) {
         throw 'missing meta args';
+    }
 }
 
 function isValidStatus(status) {
@@ -73,22 +76,28 @@ async function updateMeta(newMeta) {
 
     await db.updateMeta(newMeta);
 
-    if (newMeta.maxJobRun && Number.isInteger(newMeta.maxJobRun))
+    if (newMeta.maxJobRun && Number.isInteger(newMeta.maxJobRun)) {
         MAX_JOB_RUN = newMeta.maxJobRun;
+    }
 
-    return { maxJobRun: newMeta.maxJobRun }
+    return {
+        maxJobRun: newMeta.maxJobRun
+    };
 }
 
 async function ticker() {
     const sortByNextRunDate = (a, b) => {
-        if (a.nextRunDate === null && b.nextRunDate === null)
+        if (a.nextRunDate === null && b.nextRunDate === null) {
             return a.creationDate < b.creationDate ? -1 : 1;
+        }
 
-        if (a.nextRunDate === null)
+        if (a.nextRunDate === null) {
             return -1;
+        }
 
-        if (a.nextRunDate === b.nextRunDate)
+        if (a.nextRunDate === b.nextRunDate) {
             return 0;
+        }
 
         return a.nextRunDate < b.nextRunDate ? 1 : -1;
     }
@@ -135,7 +144,7 @@ async function ticker() {
                     });
 
                 // add to cancel list
-                cancelRunningJobManger.add(job.uid, onCancel);                
+                cancelRunningJobManger.add(job.uid, onCancel);
             });
         } catch (err) {
             console.error(`[ticker] ${job.uid}`, chalk.red(`Error`), err);
@@ -152,14 +161,16 @@ async function createJob(job) {
 }
 
 async function deleteJob(uid) {
-    if (!uid)
+    if (!uid) {
         throw Error('missing args');
+    }
     return db.deleteJob(uid);
 }
 
 async function updateJobStatus(uid, status) {
-    if (!uid || !status || !isValidStatus(status))
+    if (!uid || !status || !isValidStatus(status)) {
         throw 'invalid args';
+    }
 
     return db.updateJob(uid, status);
 }
@@ -216,7 +227,7 @@ async function cancelJob(uid) {
 }
 
 async function updateJobsMax(newMaxValue) {
-    await db.updateMeta(newMaxValue)
+    await db.updateMeta(newMaxValue);
     MAX_JOB_RUN = newMaxValue; // update in memory value
 }
 
@@ -226,10 +237,11 @@ async function onJobFinish(uid) {
         status: JOB_STATUS.PENDING,
         lastRunDate: Date.now(),
         nextRunDate: calcNextRunDate(job.cronTime)
-    }
+    };
 
-    if (job.singleRun)
+    if (job.singleRun) {
         data.status = JOB_STATUS.FINISHED;
+    }
 
     await db.updateJob(uid, Object.assign({}, job, data));
     cancelRunningJobManger.remove(uid);
@@ -241,7 +253,7 @@ async function onJobError(uid) {
     const jobUpdate = {
         status: JOB_STATUS.FAILED,
         lastRunDate: Date.now()
-    }
+    };
 
     await db.updateJob(uid, jobUpdate);
     await cancelRunningJobManger.cancel(uid);
