@@ -53,7 +53,7 @@ function printDbState(showFull) {
         console.log('\nDB STATUS:', dbInstance.jobs);
         return;
     }
-    
+
     console.log('\nDB STATUS:', dbInstance.jobs.map(i => {
         return {
             moduleName: i.moduleName,
@@ -67,7 +67,7 @@ function printDbState(showFull) {
 
 async function createJob(job) {
     const newJob = Object.assign({}, job, { uid: uuidv4() });
-    dbInstance.jobs.push(newJob);    
+    dbInstance.jobs.push(newJob);
 }
 
 async function readJob(uid) {
@@ -83,12 +83,12 @@ async function updateJob(uid, newJob) {
             Object.assign(job, newJob);
             break;
         }
-    }    
+    }
 }
 
 async function deleteJob(uid) {
     const data = dbInstance.jobs.filter(job => job.uid !== uid);
-    dbInstance.jobs = data;    
+    dbInstance.jobs = data;
 }
 
 async function readNextRunDateJobs() {

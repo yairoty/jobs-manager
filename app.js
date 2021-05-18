@@ -34,6 +34,8 @@ app.listen(port, (err) => {
         .then(() => {
             cron.schedule(cronTime, ticker);
             console.log(chalk.green('Scheduler ticks...'));
+
+
         }).catch((err) => {
             console.error(chalk.red.bold('error: '), err.message, err.stack);
         });
